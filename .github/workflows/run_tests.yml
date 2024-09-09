@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+      - lgsl7
       
   pull_request:
   # Allow manually triggering the workflow.
