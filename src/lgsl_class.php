@@ -423,7 +423,7 @@
     function saveServer(&$server) {
       global $lgsl_config;
       $packed_cache = $this->escape_string(base64_encode(serialize($server->toArray())));
-      $status = (int) ($server->getStatus() === Server::ONLINE);
+      $status = (int) $server->isOnline();
       $this->execute("
         UPDATE `{$lgsl_config['db']['prefix']}{$lgsl_config['db']['table']}`
         SET `status`='{$status}',
@@ -458,6 +458,7 @@
         $server['p'] = $cache['p'];
         if (isset($cache['h'])) $server['h'] = $cache['h'];
         if (isset($cache['o']['location'])) $server['o']['location'] = $cache['o']['location'];
+        if (isset($cache['o']['conn_tries'])) $server['o']['conn_tries'] = $cache['o']['conn_tries'];
         $server['s']['cache_time'] = new Timestamp($data['cache_time']);
       }
       return $server;
@@ -669,7 +670,8 @@
       ];
       $this->_other = [
         "zone" => null,
-        "comment" => ''
+        "comment" => '',
+        'conn_tries' => 0
       ];
     }
     
@@ -677,7 +679,6 @@
       $request = "{$request}c"; // cached by default
       $db = LGSL::db();
       $db->loadServer($this);
-      global $lgsl_config;
       $needed = $this->checkTimestamps($request);
       if (LGSL::requestHas($request, "h")) { $needed .= "h"; }
       if ($needed) {
@@ -914,7 +915,7 @@
 				}
     
         // INSERT DATA INTO STATIC LINK - CONVERT SPECIAL CHARACTERS - RETURN
-        return htmlentities(str_replace(["{IP}", "{C_PORT}", "{Q_PORT}", "{S_PORT}", "{GAME}"], [$this->getIp(), $this->getConnectionPort(), $this->getQueryPort(), $s_port, $this->getGame()], $link), ENT_QUOTES);
+        return htmlentities(str_replace(["{IP}", "{C_PORT}", "{Q_PORT}", "{S_PORT}", "{GAME}"], [$this->getIp(true), $this->getConnectionPort(), $this->getQueryPort(), $s_port, $this->getGame()], $link), ENT_QUOTES);
     }
 		public function addUrlPath($path = '') {
       global $lgsl_url_path;
@@ -1048,6 +1049,9 @@
     }
     public function getZone() {
       return isset($this->_other['zone']) ? $this->_other['zone'] : "";
+    }
+    public function getConnectionTries() {
+      return isset($this->_other['conn_tries']) ? $this->_other['conn_tries'] : 0;
     }
     public function addOption($name, $value) {
       if (isset($this->_extra[$name])) {
@@ -1214,4 +1218,3 @@
     $output .= "
     </select>";
   }
-  
